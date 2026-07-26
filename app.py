@@ -93,7 +93,7 @@ with tab_learn:
                 with st.spinner("Preparing detailed guidance in English + Telugu..."):
                     prompt = f"Explain clearly from basics to advanced: {user_query}"
                     response = client.models.generate_content(
-                        model='gemini-2.5-flash',
+                        model='gemini-2.0-flash',
                         contents=prompt,
                         config=types.GenerateContentConfig(system_instruction=SYSTEM_INSTRUCTION)
                     )
@@ -109,7 +109,7 @@ with tab_learn:
             with st.spinner("Designing schedule..."):
                 prompt = f"Create a practical daily study time table for {exam_name} with {study_hours} study hours per day. Explain in English + Telugu."
                 response = client.models.generate_content(
-                    model='gemini-2.5-flash',
+                    model='gemini-2.0-flash',
                     contents=prompt,
                     config=types.GenerateContentConfig(system_instruction=SYSTEM_INSTRUCTION)
                 )
@@ -131,7 +131,7 @@ with tab_practice:
                 "Then provide Answer Key with step-by-step explanations in English + Telugu."
             )
             response = client.models.generate_content(
-                model='gemini-2.5-flash',
+                model='gemini-2.0-flash',
                 contents=prompt,
                 config=types.GenerateContentConfig(system_instruction=SYSTEM_INSTRUCTION)
             )
