@@ -67,10 +67,27 @@ Key Rules:
 3. Structure: Use bold headers, examples, step-by-step logic, and clean bullet points for easy reading.
 """
 
-model = genai.GenerativeModel(
-    model_name='gemini-1.5-flash',
-    system_instruction=SYSTEM_INSTRUCTION
-)
+def generate_response(prompt_text):
+    # Valid model names for google-generativeai SDK
+    models_to_try = [
+        'gemini-1.5-flash-latest', 
+        'gemini-1.5-pro-latest', 
+        'gemini-pro'
+    ]
+    
+    for model_name in models_to_try:
+        try:
+            model = genai.GenerativeModel(
+                model_name=model_name,
+                system_instruction=SYSTEM_INSTRUCTION
+            )
+            response = model.generate_content(prompt_text)
+            return response.text
+        except Exception:
+            continue
+            
+    st.error("Unable to generate response. Please check API Key status in Google AI Studio.")
+    return None
 
 tab_learn, tab_practice = st.tabs(["📖 Learning & Guidance", "📝 Practice & Mock Test"])
 
@@ -90,12 +107,10 @@ with tab_learn:
         if st.button("🚀 Explain Step-by-Step"):
             if user_query:
                 with st.spinner("Preparing detailed guidance in English + Telugu..."):
-                    try:
-                        response = model.generate_content(f"Explain clearly from basics to advanced: {user_query}")
+                    res = generate_response(f"Explain clearly from basics to advanced: {user_query}")
+                    if res:
                         st.success("Here is your explanation:")
-                        st.markdown(response.text)
-                    except Exception as e:
-                        st.error(f"Error: {e}")
+                        st.markdown(res)
             else:
                 st.warning("Please type a topic or question first!")
 
@@ -104,11 +119,9 @@ with tab_learn:
         study_hours = st.slider("Daily Available Study Hours", 2, 12, 6)
         if st.button("🎯 Generate Time Table"):
             with st.spinner("Designing schedule..."):
-                try:
-                    response = model.generate_content(f"Create a practical daily study time table for {exam_name} with {study_hours} study hours per day. Explain in English + Telugu.")
-                    st.markdown(response.text)
-                except Exception as e:
-                    st.error(f"Error: {e}")
+                res = generate_response(f"Create a practical daily study time table for {exam_name} with {study_hours} study hours per day. Explain in English + Telugu.")
+                if res:
+                    st.markdown(res)
 
 with tab_practice:
     st.subheader("📝 Practice Mock Test")
@@ -125,8 +138,6 @@ with tab_practice:
                 "Provide Questions 1-5 with options first. "
                 "Then provide Answer Key with step-by-step explanations in English + Telugu."
             )
-            try:
-                response = model.generate_content(prompt)
-                st.markdown(response.text)
-            except Exception as e:
-                st.error(f"Error: {e}")
+            res = generate_response(prompt)
+            if res:
+                st.markdown(res)
