@@ -1,6 +1,5 @@
 import streamlit as st
-from google import genai
-from google.genai import types
+import google.generativeai as genai
 
 # Page Config
 st.set_page_config(
@@ -44,15 +43,6 @@ st.markdown("""
 # Get API Key
 GEMINI_API_KEY = st.secrets.get("GEMINI_API_KEY", "").strip()
 
-SYSTEM_INSTRUCTION = """
-You are 'ExamSaathi', an expert AI mentor and tutor created specifically to help the user prepare for Indian Competitive Exams (SSC CGL, CHSL, Banking, Railway, APPSC/TSPSC).
-
-Key Rules:
-1. Language: Explain every concept using a simple, clear combination of English and Telugu script (Bilingual). Technical terms should be in English with clear Telugu explanations.
-2. Subject Knowledge: You are an expert across Quantitative Aptitude, Logical Reasoning, General Awareness (GK/Current Affairs), and English Language.
-3. Structure: Use bold headers, examples, step-by-step logic, and clean bullet points for easy reading.
-"""
-
 # Custom Header
 st.markdown("""
 <div class="main-header">
@@ -62,29 +52,25 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 if not GEMINI_API_KEY:
-    st.error("⚠️ GEMINI_API_KEY Secrets mein missing hai! Streamlit Settings -> Secrets mein key add karein.")
+    st.error("⚠️ GEMINI_API_KEY Secrets mein missing hai! Streamlit Settings -> Secrets mein key check karein.")
     st.stop()
 
-# Initialize Client
-try:
-    client = genai.Client(api_key=GEMINI_API_KEY)
-except Exception as e:
-    st.error(f"Client initialization error: {e}")
-    st.stop()
+# Configure GenAI
+genai.configure(api_key=GEMINI_API_KEY)
 
-def ask_gemini(prompt_text):
-    models = ['gemini-2.5-flash', 'gemini-1.5-flash']
-    for model_name in models:
-        try:
-            res = client.models.generate_content(
-                model=model_name,
-                contents=prompt_text,
-                config=types.GenerateContentConfig(system_instruction=SYSTEM_INSTRUCTION)
-            )
-            return res.text
-        except Exception:
-            continue
-    return None
+SYSTEM_INSTRUCTION = """
+You are 'ExamSaathi', an expert AI mentor and tutor created specifically to help the user prepare for Indian Competitive Exams (SSC CGL, CHSL, Banking, Railway, APPSC/TSPSC).
+
+Key Rules:
+1. Language: Explain every concept using a simple, clear combination of English and Telugu script (Bilingual). Technical terms should be in English with clear Telugu explanations.
+2. Subject Knowledge: You are an expert across Quantitative Aptitude, Logical Reasoning, General Awareness (GK/Current Affairs), and English Language.
+3. Structure: Use bold headers, examples, step-by-step logic, and clean bullet points for easy reading.
+"""
+
+model = genai.GenerativeModel(
+    model_name='gemini-1.5-flash',
+    system_instruction=SYSTEM_INSTRUCTION
+)
 
 tab_learn, tab_practice = st.tabs(["📖 Learning & Guidance", "📝 Practice & Mock Test"])
 
@@ -104,12 +90,12 @@ with tab_learn:
         if st.button("🚀 Explain Step-by-Step"):
             if user_query:
                 with st.spinner("Preparing detailed guidance in English + Telugu..."):
-                    ans = ask_gemini(f"Explain clearly from basics to advanced: {user_query}")
-                    if ans:
+                    try:
+                        response = model.generate_content(f"Explain clearly from basics to advanced: {user_query}")
                         st.success("Here is your explanation:")
-                        st.markdown(ans)
-                    else:
-                        st.error("❌ API Call failed! Kripya Streamlit Secrets mein apni Google AI Studio API Key (jo 'AIzaSy' se shuru hoti hai) check karein.")
+                        st.markdown(response.text)
+                    except Exception as e:
+                        st.error(f"Error: {e}")
             else:
                 st.warning("Please type a topic or question first!")
 
@@ -118,11 +104,11 @@ with tab_learn:
         study_hours = st.slider("Daily Available Study Hours", 2, 12, 6)
         if st.button("🎯 Generate Time Table"):
             with st.spinner("Designing schedule..."):
-                ans = ask_gemini(f"Create a practical daily study time table for {exam_name} with {study_hours} study hours per day. Explain in English + Telugu.")
-                if ans:
-                    st.markdown(ans)
-                else:
-                    st.error("❌ API Call failed! Secrets mein API Key Verify karein.")
+                try:
+                    response = model.generate_content(f"Create a practical daily study time table for {exam_name} with {study_hours} study hours per day. Explain in English + Telugu.")
+                    st.markdown(response.text)
+                except Exception as e:
+                    st.error(f"Error: {e}")
 
 with tab_practice:
     st.subheader("📝 Practice Mock Test")
@@ -139,8 +125,8 @@ with tab_practice:
                 "Provide Questions 1-5 with options first. "
                 "Then provide Answer Key with step-by-step explanations in English + Telugu."
             )
-            ans = ask_gemini(prompt)
-            if ans:
-                st.markdown(ans)
-            else:
-                st.error("❌ API Call failed! Secrets mein API Key Verify karein.")
+            try:
+                response = model.generate_content(prompt)
+                st.markdown(response.text)
+            except Exception as e:
+                st.error(f"Error: {e}")
