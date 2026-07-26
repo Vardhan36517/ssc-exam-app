@@ -39,7 +39,7 @@ st.markdown("""
         box-shadow: 0 4px 12px rgba(0,0,0,0.15);
     }
 </style>
-""", unsafe_allow_html=unsafe_allow_style_tags=True)
+""", unsafe_allow_html=True)
 
 # Get API Key
 GEMINI_API_KEY = st.secrets.get("GEMINI_API_KEY", "")
