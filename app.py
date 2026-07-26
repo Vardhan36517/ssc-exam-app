@@ -61,22 +61,6 @@ def get_client(api_key):
 
 client = get_client(GEMINI_API_KEY)
 
-# Function to generate AI response with fallback model
-def generate_ai_response(prompt):
-    models_to_try = ['gemini-2.0-flash', 'gemini-1.5-flash']
-    for model_name in models_to_try:
-        try:
-            res = client.models.generate_content(
-                model=model_name,
-                contents=prompt,
-                config=types.GenerateContentConfig(system_instruction=SYSTEM_INSTRUCTION)
-            )
-            return res.text
-        except Exception as e:
-            continue
-    st.error("API Key invalid hai ya Google AI Studio ka rate limit exceed ho gaya hai. Kripya Secrets me API key check karein!")
-    return None
-
 # Custom Header
 st.markdown("""
 <div class="main-header">
@@ -108,10 +92,13 @@ with tab_learn:
             if user_query:
                 with st.spinner("Preparing detailed guidance in English + Telugu..."):
                     prompt = f"Explain clearly from basics to advanced: {user_query}"
-                    output = generate_ai_response(prompt)
-                    if output:
-                        st.success("Here is your explanation:")
-                        st.markdown(output)
+                    response = client.models.generate_content(
+                        model='gemini-1.5-flash',
+                        contents=prompt,
+                        config=types.GenerateContentConfig(system_instruction=SYSTEM_INSTRUCTION)
+                    )
+                    st.success("Here is your explanation:")
+                    st.markdown(response.text)
             else:
                 st.warning("Please type a topic or question first!")
 
@@ -121,9 +108,12 @@ with tab_learn:
         if st.button("🎯 Generate Time Table"):
             with st.spinner("Designing schedule..."):
                 prompt = f"Create a practical daily study time table for {exam_name} with {study_hours} study hours per day. Explain in English + Telugu."
-                output = generate_ai_response(prompt)
-                if output:
-                    st.markdown(output)
+                response = client.models.generate_content(
+                    model='gemini-1.5-flash',
+                    contents=prompt,
+                    config=types.GenerateContentConfig(system_instruction=SYSTEM_INSTRUCTION)
+                )
+                st.markdown(response.text)
 
 with tab_practice:
     st.subheader("📝 Practice Mock Test")
@@ -140,6 +130,9 @@ with tab_practice:
                 "Provide Questions 1-5 with options first. "
                 "Then provide Answer Key with step-by-step explanations in English + Telugu."
             )
-            output = generate_ai_response(prompt)
-            if output:
-                st.markdown(output)
+            response = client.models.generate_content(
+                model='gemini-1.5-flash',
+                contents=prompt,
+                config=types.GenerateContentConfig(system_instruction=SYSTEM_INSTRUCTION)
+            )
+            st.markdown(response.text)
