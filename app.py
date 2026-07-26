@@ -1,5 +1,6 @@
 import streamlit as st
-import google.generativeai as genai
+import requests
+import json
 
 # Page Config
 st.set_page_config(
@@ -55,9 +56,6 @@ if not GEMINI_API_KEY:
     st.error("⚠️ GEMINI_API_KEY Secrets mein missing hai! Streamlit Settings -> Secrets mein key check karein.")
     st.stop()
 
-# Configure GenAI
-genai.configure(api_key=GEMINI_API_KEY)
-
 SYSTEM_INSTRUCTION = """
 You are 'ExamSaathi', an expert AI mentor and tutor created specifically to help the user prepare for Indian Competitive Exams (SSC CGL, CHSL, Banking, Railway, APPSC/TSPSC).
 
@@ -67,27 +65,33 @@ Key Rules:
 3. Structure: Use bold headers, examples, step-by-step logic, and clean bullet points for easy reading.
 """
 
-def generate_response(prompt_text):
-    # Valid model names for google-generativeai SDK
-    models_to_try = [
-        'gemini-1.5-flash-latest', 
-        'gemini-1.5-pro-latest', 
-        'gemini-pro'
-    ]
+def call_gemini_api(prompt_text):
+    # Direct REST API endpoint
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
     
-    for model_name in models_to_try:
-        try:
-            model = genai.GenerativeModel(
-                model_name=model_name,
-                system_instruction=SYSTEM_INSTRUCTION
-            )
-            response = model.generate_content(prompt_text)
-            return response.text
-        except Exception:
-            continue
-            
-    st.error("Unable to generate response. Please check API Key status in Google AI Studio.")
-    return None
+    headers = {'Content-Type': 'application/json'}
+    payload = {
+        "system_instruction": {
+            "parts": [{"text": SYSTEM_INSTRUCTION}]
+        },
+        "contents": [{
+            "parts": [{"text": prompt_text}]
+        }]
+    }
+
+    try:
+        response = requests.post(url, headers=headers, json=payload)
+        res_data = response.json()
+        
+        if response.status_code == 200:
+            return res_data['candidates'][0]['content']['parts'][0]['text']
+        else:
+            error_msg = res_data.get('error', {}).get('message', 'Unknown Error')
+            st.error(f"API Error ({response.status_code}): {error_msg}")
+            return None
+    except Exception as e:
+        st.error(f"Connection Error: {e}")
+        return None
 
 tab_learn, tab_practice = st.tabs(["📖 Learning & Guidance", "📝 Practice & Mock Test"])
 
@@ -107,7 +111,7 @@ with tab_learn:
         if st.button("🚀 Explain Step-by-Step"):
             if user_query:
                 with st.spinner("Preparing detailed guidance in English + Telugu..."):
-                    res = generate_response(f"Explain clearly from basics to advanced: {user_query}")
+                    res = call_gemini_api(f"Explain clearly from basics to advanced: {user_query}")
                     if res:
                         st.success("Here is your explanation:")
                         st.markdown(res)
@@ -119,7 +123,7 @@ with tab_learn:
         study_hours = st.slider("Daily Available Study Hours", 2, 12, 6)
         if st.button("🎯 Generate Time Table"):
             with st.spinner("Designing schedule..."):
-                res = generate_response(f"Create a practical daily study time table for {exam_name} with {study_hours} study hours per day. Explain in English + Telugu.")
+                res = call_gemini_api(f"Create a practical daily study time table for {exam_name} with {study_hours} study hours per day. Explain in English + Telugu.")
                 if res:
                     st.markdown(res)
 
@@ -138,6 +142,6 @@ with tab_practice:
                 "Provide Questions 1-5 with options first. "
                 "Then provide Answer Key with step-by-step explanations in English + Telugu."
             )
-            res = generate_response(prompt)
+            res = call_gemini_api(prompt)
             if res:
                 st.markdown(res)
