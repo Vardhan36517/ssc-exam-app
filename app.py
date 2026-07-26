@@ -1,6 +1,5 @@
 import streamlit as st
 import requests
-import json
 
 # Page Config
 st.set_page_config(
@@ -66,8 +65,12 @@ Key Rules:
 """
 
 def call_gemini_api(prompt_text):
-    # Direct REST API endpoint
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
+    # Trying models sequentially
+    models_to_try = [
+        "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent",
+        "https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent",
+        "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent"
+    ]
     
     headers = {'Content-Type': 'application/json'}
     payload = {
@@ -79,19 +82,22 @@ def call_gemini_api(prompt_text):
         }]
     }
 
-    try:
-        response = requests.post(url, headers=headers, json=payload)
-        res_data = response.json()
-        
-        if response.status_code == 200:
-            return res_data['candidates'][0]['content']['parts'][0]['text']
-        else:
-            error_msg = res_data.get('error', {}).get('message', 'Unknown Error')
-            st.error(f"API Error ({response.status_code}): {error_msg}")
-            return None
-    except Exception as e:
-        st.error(f"Connection Error: {e}")
-        return None
+    last_error = ""
+    for base_url in models_to_try:
+        url = f"{base_url}?key={GEMINI_API_KEY}"
+        try:
+            response = requests.post(url, headers=headers, json=payload)
+            res_data = response.json()
+            
+            if response.status_code == 200:
+                return res_data['candidates'][0]['content']['parts'][0]['text']
+            else:
+                last_error = res_data.get('error', {}).get('message', 'Unknown Error')
+        except Exception as e:
+            last_error = str(e)
+
+    st.error(f"API Error: {last_error}")
+    return None
 
 tab_learn, tab_practice = st.tabs(["📖 Learning & Guidance", "📝 Practice & Mock Test"])
 
